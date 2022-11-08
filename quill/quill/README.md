@@ -127,7 +127,7 @@ class BubbleTheme extends BaseTheme {
 
 ## Blot的生命周期
 
-###### Creation
+##### Creation
 
 所有类型的`Blot`都有一个`static create`方法，接收初始值`value`，根据`Blot`的`tagName`和`className`创建对应的`DOM Node`。特殊的`Blot`可以重写`statis create`方法，最后要返回`node`。
 
@@ -160,7 +160,7 @@ export function create(input: Node | string | Scope, value?: any): Blot {
 }
 ```
 
-###### Attach
+##### Attach
 
 `Parhcment.create`执行完后，需要将其挂载到Quill Tree 和 DOM Tree上。无论是`insertAt`还是`replace`,最后都会回到起父容器中执行`insertBefore`,  该方法会执行所有`child blot`的`insertInto`方法。在`insertInto`中会更新Quill Tree和DOM Tree
 
@@ -187,7 +187,7 @@ insertInto(parentBlot: Parent, refBlot: Blot | null = null): void {
 }
 ```
 
-###### Update & Optimization
+##### Update & Optimization
 
 `ScrollBlot`是顶层的`ContainerBlot`，它是在`quill`初始化时实例化的，所有的`blot`都在这个容器内，内部通过`MutationObserver`监听了整个编辑器的`DOM`变化，并执行容器内所有`Blot`的attach方法。
 
@@ -286,7 +286,7 @@ optimize(context: { [key: string]: any }): void {
 }
 ```
 
-###### Deletion and Detachment
+##### Deletion and Detachment
 
 `remove`最后都会调用这个方法，来删除`Quill Tree`和`DOM Tree`中的该节点
 
