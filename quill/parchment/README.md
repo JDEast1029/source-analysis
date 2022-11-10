@@ -4,7 +4,7 @@ Parchment是一种文档模型，是与DOM树并行的树结构。`Blots`构成`
 
 #### Blot类图
 
-![](/Users/dongjiang/Library/Application%20Support/marktext/images/2022-10-24-15-28-24-image.png)
+![](./blot.png)
 
 ##### 节点用途
 
@@ -36,7 +36,7 @@ Parchment是一种文档模型，是与DOM树并行的树结构。`Blots`构成`
 
 #### Attribute类图
 
-![](/Users/dongjiang/Library/Application%20Support/marktext/images/2022-10-24-17-58-31-image.png)
+![](./attribute.png)
 
 #### Registry
 
