@@ -321,3 +321,85 @@ deleteAt(index: number, length: number): void {
   blot.remove();
 }
 ```
+
+## Formats
+
+在`quill/formats`定义的格式中，会经常看到像`static formats`、`format`、`formats`这些方法，却不知道它们的具体用途以及调用时机。
+
+拥有这些方法的`blot`都是`InlineBlot`、`BlockBlot`和`EmbedBlot`这些继承或者实现了`Parchment.FromatBlot`和`Parchment.Formattable`的节点。通过下面的代码可以看出方法的调用顺序formatAt -> format(可能会跳过) -> formats -> statics.formats。而`formatAt`则会通过`Quill.format`进行调用 
+
+```js
+class EmbedBlot extends LeafBlot implements Formattable {
+  static formats(domNode: HTMLElement): any {
+    return undefined;
+  }
+
+  format(name: string, value: any): void {
+    // super.formatAt wraps, which is what we want in general,
+    // but this allows subclasses to overwrite for formats
+    // that just apply to particular embeds
+    super.formatAt(0, this.length(), name, value);
+  }
+
+  formatAt(index: number, length: number, name: string, value: any): void {
+    if (index === 0 && length === this.length()) {
+      this.format(name, value);
+    } else {
+      super.formatAt(index, length, name, value);
+    }
+  }
+
+  formats(): { [index: string]: any } {
+    return this.statics.formats(this.domNode);
+  }
+}
+```
+
+```js
+// FormatBlot
+static formats(domNode: HTMLElement): any {
+  if (typeof this.tagName === 'string') {
+    return true;
+  } else if (Array.isArray(this.tagName)) {
+    return domNode.tagName.toLowerCase();
+  }
+  return undefined;
+}
+
+format(name: string, value: any): void {
+  let format = Registry.query(name);
+  if (format instanceof Attributor) {
+    this.attributes.attribute(format, value);
+  } else if (value) {
+    if (format != null && (name !== this.statics.blotName || this.formats()[name] !== value)) {
+      this.replaceWith(name, value);
+    }
+  }
+}
+
+formats(): { [index: string]: any } {
+  let formats = this.attributes.values();
+  let format = this.statics.formats(this.domNode);
+  if (format != null) {
+    formats[this.statics.blotName] = format;
+  }
+  return formats;
+}
+
+// BlockBlot
+formatAt(index: number, length: number, name: string, value: any): void {
+  if (Registry.query(name, Registry.Scope.BLOCK) != null) {
+    this.format(name, value);
+  } else {
+    super.formatAt(index, length, name, value);
+  }
+}
+```
+
++ `formatAt`：对指定范围进行格式化
+
++ `format`：更换样式或者替换节点
+
++ `formats`：为`blot`的formats设置`blotName`属性，值为`static formats`方法获取
+
++ `static formats`：如果`static.tagName`为数组，返回`tagName`，否则返回`true`
