@@ -1,6 +1,4 @@
-# 初始化渲染
-
-#### createApp
+# createApp
 `createApp`是我们一开始就要调用的方法，通过该方法创建我们的`app`实例;
 ```js
 // example
@@ -23,7 +21,21 @@ export const createApp = ((...args) => {
     injectCompilerOptionsCheck(app)
   }
 
-  // ...
+  const { mount } = app
+  app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
+    // normalizeContainer(container: Element | ShadowRoot | string): Element | null
+    // 返回实例的挂载节点
+    const container = normalizeContainer(containerOrSelector)
+    if (!container) return
+    // 略
+    container.innerHTML = ''
+    const proxy = mount(container, false, container instanceof SVGElement)
+    if (container instanceof Element) {
+      container.removeAttribute('v-cloak')
+      container.setAttribute('data-v-app', '')
+    }
+    return proxy
+  }
 
   return app
 }) as CreateAppFunction<Element>
@@ -50,7 +62,7 @@ export function createRenderer<
 ```
 
 ```js
-// 路径：packages/runtime-dom/src/renderer.ts baseCreateRenderer 
+// 路径：packages/runtime-core/src/renderer.ts baseCreateRenderer 
 // 这个方法有2000行左右，后面在render板块中单独分析
 function baseCreateRenderer(
   options: RendererOptions,
