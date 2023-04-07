@@ -78,7 +78,9 @@ function baseCreateRenderer(
     } else {
       patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
+    // 执行预处理回调函数
     flushPreFlushCbs()
+    // 执行完DOM 更新完成之后执行一些副作用代码
     flushPostFlushCbs()
     container._vnode = vnode
   }
@@ -137,6 +139,7 @@ export function createAppAPI<HostElement>(
             }
           }
 
+          // 是否是ssr渲染
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
@@ -170,6 +173,8 @@ export function createAppAPI<HostElement>(
 }
 ```
 我们可以看到很多熟悉的api，这里主要看下`mount`函数干了什么：
-+ 通过`createVNode`创建了`vnode`
-+ 将`appContext`放入`vnode`
-+ 调用`baseCreateRenderer`中定义的`render`函数将`vnode`渲染到我们设置的容器dom上,即`#app`; 
+1. 通过`createVNode`创建了`vnode`
+2. 将`appContext`放入`vnode`
+3. 调用`baseCreateRenderer`中定义的`render`函数将`vnode`渲染到我们设置的容器dom上,即`#app`; 
+
+渲染相关的部分可以看`render/index.md`
