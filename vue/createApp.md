@@ -76,6 +76,7 @@ function baseCreateRenderer(
         unmount(container._vnode, null, null, true)
       }
     } else {
+      // 更新dom节点
       patch(container._vnode || null, vnode, container, null, null, null, isSVG)
     }
     // 执行预处理回调函数
@@ -172,9 +173,15 @@ export function createAppAPI<HostElement>(
   }
 }
 ```
-我们可以看到很多熟悉的api，这里主要看下`mount`函数干了什么：
+
+### 总结
+vue项目初始化渲染到dom上经历了以下几点：
+1. `createApp`内调用`ensureRenderer().createApp`方法，并扩展了它的`mount`方法
+2. 用户调用`app.mount`, 内部会获取app挂载的dom节点；
+`mount`函数干了什么：
 1. 通过`createVNode`创建了`vnode`
 2. 将`appContext`放入`vnode`
 3. 调用`baseCreateRenderer`中定义的`render`函数将`vnode`渲染到我们设置的容器dom上,即`#app`; 
+4. `render`函数内部调用了`path`方法更新节点
 
 渲染相关的部分可以看`render/index.md`

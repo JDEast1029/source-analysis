@@ -4,7 +4,6 @@
 在`createApp`的mount方法中，调用`baseCreateRenderer`返回的`render`函数来进行渲染；内部会调用`patch`方法，将虚拟 DOM 转换为真实 DOM
 ```ts
 // 路径：packages/runtime-core/src/renderer.ts baseCreateRenderer 
-// 这个方法有2000行左右，后面在render板块中单独分析
 function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions
