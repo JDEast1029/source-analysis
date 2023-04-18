@@ -271,4 +271,206 @@ export function injectHook(
 }
 ```
 
+### 生命周期的调用时机
+在上面的`finishComponentSetup` 部分已经介绍了`beforeCreate`和`created`的调用时机,下面看下`mount`、`update`、`unmounted`相关生命周期的调用：
+#### mounted
+1. 如果实例没有挂载, 执行收集的`beforeMount`方法，执行`props`内`onVnodeBeforeMount`的方法， 并向外发射`hook:beforeMount`
+2. 调用`patch`挂载子组件
+3. 执行收集的`mounted`方法，执行`props`内`onVnodeMounted`的方法， 并向外发射`hook:mounted`
+4. 如果是`keep-alive`组件，会触发`activated`生命周期钩子
+5. `instance.isMounted = true` 标记组件已经挂载
 
+```ts
+// packages/runtime-core/src/renderer.ts  setupRenderEffect方法内声明
+const componentUpdateFn = () => {
+   if (!instance.isMounted) {
+     let vnodeHook: VNodeHook | null | undefined
+     const { el, props } = initialVNode
+     const { bm, m, parent } = instance
+     const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
+
+     // 关闭递归
+     toggleRecurse(instance, false)
+     // beforeMount hook
+     if (bm) {
+       invokeArrayFns(bm)
+     }
+     // onVnodeBeforeMount
+     if (
+       !isAsyncWrapperVNode &&
+       (vnodeHook = props && props.onVnodeBeforeMount)
+     ) {
+       invokeVNodeHook(vnodeHook, parent, initialVNode)
+     }
+     if (
+       __COMPAT__ &&
+       isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+     ) {
+       instance.emit('hook:beforeMount')
+     }
+
+      // 开启递归
+     toggleRecurse(instance, true)
+
+     if (el && hydrateNode) {
+       // vnode has adopted host node - perform hydration instead of mount.
+     } else {
+       const subTree = (instance.subTree = renderComponentRoot(instance))
+       patch(
+         null,
+         subTree,
+         container,
+         anchor,
+         instance,
+         parentSuspense,
+         isSVG
+       )
+       initialVNode.el = subTree.el
+     }
+     // mounted hook
+     if (m) {
+       queuePostRenderEffect(m, parentSuspense)
+     }
+     // onVnodeMounted
+     if (
+       !isAsyncWrapperVNode &&
+       (vnodeHook = props && props.onVnodeMounted)
+     ) {
+       const scopedInitialVNode = initialVNode
+       queuePostRenderEffect(
+         () => invokeVNodeHook(vnodeHook!, parent, scopedInitialVNode),
+         parentSuspense
+       )
+     }
+     if (
+       __COMPAT__ &&
+       isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+     ) {
+       queuePostRenderEffect(
+         () => instance.emit('hook:mounted'),
+         parentSuspense
+       )
+     }
+
+     // activated hook for keep-alive roots.
+     // #1742 activated hook must be accessed after first render
+     // since the hook may be injected by a child keep-alive
+     if (
+       initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE ||
+       (parent &&
+         isAsyncWrapper(parent.vnode) &&
+         parent.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
+     ) {
+       instance.a && queuePostRenderEffect(instance.a, parentSuspense)
+       if (
+         __COMPAT__ &&
+         isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+       ) {
+         queuePostRenderEffect(
+           () => instance.emit('hook:activated'),
+           parentSuspense
+         )
+       }
+     }
+     instance.isMounted = true
+
+     // #2458: deference mount-only object parameters to prevent memleaks
+     initialVNode = container = anchor = null as any
+   } else {
+     // updateComponent
+   }
+ }
+```
+
+#### updated
+1. 组件修改触发更新(vue的响应式里面会介绍)，执行收集的`beforeUpdate`方法，执行`props`内`onVnodeBeforeUpdate`的方法， 并向外发射`hook:beforeUpdate`
+2. 调用`patch`更新子组件
+3. 执行收集的`updated`方法，执行`props`内`onVnodeUpdated`的方法， 并向外发射`hook:updated`
+
+```ts
+// packages/runtime-core/src/renderer.ts  setupRenderEffect方法内声明
+const componentUpdateFn = () => {
+   if (!instance.isMounted) {
+    // mount component
+   } else {
+     // updateComponent
+     // This is triggered by mutation of component's own state (next: null)
+     // OR parent calling processComponent (next: VNode)
+     let { next, bu, u, parent, vnode } = instance
+     let originNext = next
+     let vnodeHook: VNodeHook | null | undefined
+
+     // Disallow component effect recursion during pre-lifecycle hooks.
+     toggleRecurse(instance, false)
+
+    //  next 就是表示下一个更新周期中的组件 vnode。而 updateComponentPreRender 方法主要是对下一个版本的组件 vnode 进行预渲染更新，即对组件的状态和属性进行更新，以便在下一个周期的渲染中能够尽可能地优化性能。
+     if (next) {
+       next.el = vnode.el
+       updateComponentPreRender(instance, next, optimized)
+     } else {
+       next = vnode
+     }
+
+     // beforeUpdate hook
+     if (bu) {
+       invokeArrayFns(bu)
+     }
+     // onVnodeBeforeUpdate
+     if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
+       invokeVNodeHook(vnodeHook, parent, next, vnode)
+     }
+     if (
+       __COMPAT__ &&
+       isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+     ) {
+       instance.emit('hook:beforeUpdate')
+     }
+
+     // render
+     const nextTree = renderComponentRoot(instance)
+   
+     const prevTree = instance.subTree
+     instance.subTree = nextTree
+
+     patch(
+       prevTree,
+       nextTree,
+       // parent may have changed if it's in a teleport
+       hostParentNode(prevTree.el!)!,
+       // anchor may have changed if it's in a fragment
+       getNextHostNode(prevTree),
+       instance,
+       parentSuspense,
+       isSVG
+     )
+     next.el = nextTree.el
+     if (originNext === null) {
+       // self-triggered update. In case of HOC, update parent component
+       // vnode el. HOC is indicated by parent instance's subTree pointing
+       // to child component's vnode
+       updateHOCHostEl(instance, nextTree.el)
+     }
+     // updated hook
+     if (u) {
+       queuePostRenderEffect(u, parentSuspense)
+     }
+     // onVnodeUpdated
+     if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
+       queuePostRenderEffect(
+         () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
+         parentSuspense
+       )
+     }
+     if (
+       __COMPAT__ &&
+       isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+     ) {
+       queuePostRenderEffect(
+         () => instance.emit('hook:updated'),
+         parentSuspense
+       )
+     }
+   }
+```
+
+#### unmounted
