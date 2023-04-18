@@ -474,3 +474,97 @@ const componentUpdateFn = () => {
 ```
 
 #### unmounted
+1. 在`patch`方法中，如果新旧节点不相同则将触发组件的卸载
+2. 执行收集的`beforeUnmount`方法，并向外发射`hook:beforeDestroy`
+3. 卸载子组件
+4. 执行收集的`unmount`方法，并向外发射`hook:destroyed`
+5. 组件标记为已卸载`instance.isUnmounted = true`
+```ts
+// 路径：packages/runtime-core/src/renderer.ts baseCreateRenderer 
+// patching & not same type, unmount old tree
+if (n1 && !isSameVNodeType(n1, n2)) {
+  anchor = getNextHostNode(n1)
+  unmount(n1, parentComponent, parentSuspense, true)
+  n1 = null
+}
+```
+```ts
+// 路径：packages/runtime-core/src/renderer.ts
+const unmount: UnmountFn = (
+ vnode,
+ parentComponent,
+ parentSuspense,
+ doRemove = false,
+ optimized = false
+) => {
+ const {
+   type,
+   props,
+   ref,
+   children,
+   dynamicChildren,
+   shapeFlag,
+   patchFlag,
+   dirs
+ } = vnode
+ // ...
+ if (shapeFlag & ShapeFlags.COMPONENT) {
+   unmountComponent(vnode.component!, parentSuspense, doRemove)
+ } else {
+   // ...
+   //  unmountChildren
+   // ...
+   if (doRemove) {
+     remove(vnode)
+   }
+ }
+}
+```
+
+```ts
+// 路径：packages/runtime-core/src/renderer.ts
+const unmountComponent = (
+ instance: ComponentInternalInstance,
+ parentSuspense: SuspenseBoundary | null,
+ doRemove?: boolean
+) => {
+ const { bum, scope, update, subTree, um } = instance
+
+ // beforeUnmount hook
+ if (bum) {
+   invokeArrayFns(bum)
+ }
+
+ if (
+   __COMPAT__ &&
+   isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+ ) {
+   instance.emit('hook:beforeDestroy')
+ }
+
+ // stop effects in component scope
+ scope.stop()
+
+ // update may be null if a component is unmounted before its async
+ // setup has resolved.
+ if (update) {
+   // so that scheduler will no longer invoke it
+   update.active = false
+   unmount(subTree, instance, parentSuspense, doRemove)
+ }
+ // unmounted hook
+ if (um) {
+   queuePostRenderEffect(um, parentSuspense)
+ }
+ if (
+   __COMPAT__ &&
+   isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+ ) {
+   queuePostRenderEffect(
+     () => instance.emit('hook:destroyed'),
+     parentSuspense
+   )
+ }
+ //...
+}
+```
