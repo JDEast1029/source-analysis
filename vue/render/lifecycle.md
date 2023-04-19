@@ -383,7 +383,7 @@ const componentUpdateFn = () => {
 ```
 
 #### updated
-1. 组件修改触发更新(vue的响应式里面会介绍)，执行收集的`beforeUpdate`方法，执行`props`内`onVnodeBeforeUpdate`的方法， 并向外发射`hook:beforeUpdate`
+1. [组件修改触发更新]('../reactivity/index.md')，执行收集的`beforeUpdate`方法，执行`props`内`onVnodeBeforeUpdate`的方法， 并向外发射`hook:beforeUpdate`
 2. 调用`patch`更新子组件
 3. 执行收集的`updated`方法，执行`props`内`onVnodeUpdated`的方法， 并向外发射`hook:updated`
 

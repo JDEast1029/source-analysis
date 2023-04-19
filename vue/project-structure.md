@@ -49,6 +49,12 @@
 └── vitest.unit.config.ts
 ```
 
+### 写作的顺序
+1. [createApp.md](./createApp.md)
+2. [简化版渲染](./render/index.md)
+3. [生命周期](./render/lifecycle.md)
+4. [调度器](./render/scheduler.md)
+
 ### 学习源码的目的
 1. `template`是怎么渲染到页面上的
 2. `Vue`的编译原理
