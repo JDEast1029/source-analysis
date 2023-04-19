@@ -13,7 +13,7 @@ export function nextTick<T = void>(
 ```
 
 ## queueJob
-在`render`的`setupRenderEffect`中，`queueJob`会被传入到`ReactiveEffect`，当[触发响应](../reactivity/index.md)时，就会执行将`update`任务传入调度队列
+在`render`的`setupRenderEffect`中，`queueJob`会被传入到`ReactiveEffect`，当[触发响应](../reactivity/effect.md)时，就会执行将`update`任务传入调度队列
 ```ts
 // packages/runtime-core/src/renderer.ts   setupRenderEffect
 const effect = (instance.effect = new ReactiveEffect(

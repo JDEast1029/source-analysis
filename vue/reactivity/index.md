@@ -54,8 +54,9 @@ class RefImpl<T> {
   }
 }
 ```
-4. 获取`value`时(例：我们在`template`中使用), 会创建一个`effect`的Set集合(`dep`), 并用其收集当前的`activeEffect`
+4. 获取`value`时(例：我们在`template`中使用), 会创建一个`effect`的Set集合(`dep`)，调用[trackEffects](./effect.md)收集当前的`activeEffect`
 ```ts
+// trackEffects 参考 './effect.md'
 export function trackRefValue(ref: RefBase<any>) {
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
@@ -71,7 +72,6 @@ export function trackRefValue(ref: RefBase<any>) {
   }
 }
 ```
-
 ```ts
 // dep是一个effect的集合
 // wasTracked和newTracked维护了多级effect跟踪递归的状态。每个级别使用一个比特位来定义该依赖项是否被跟踪。
@@ -82,41 +82,7 @@ export const createDep = (effects?: ReactiveEffect[]): Dep => {
   return dep
 }
 ```
-
-```ts
-// packages/reactivity/src/effect.ts
-export function trackEffects(
-  dep: Dep,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
-) {
-  let shouldTrack = false
-  if (effectTrackDepth <= maxMarkerBits) {
-    if (!newTracked(dep)) {
-      dep.n |= trackOpBit // set newly tracked
-      shouldTrack = !wasTracked(dep)
-    }
-  } else {
-    // Full cleanup mode.
-    shouldTrack = !dep.has(activeEffect!)
-  }
-
-  if (shouldTrack) {
-    dep.add(activeEffect!)
-    activeEffect!.deps.push(dep)
-    if (__DEV__ && activeEffect!.onTrack) {
-      activeEffect!.onTrack(
-        extend(
-          {
-            effect: activeEffect!
-          },
-          debuggerEventExtraInfo!
-        )
-      )
-    }
-  }
-}
-```
-5. 设置`value`时，如果前后的值不一致，重新进行响应处理，并且执行`dep`收集的`effect`的`scheduler`方法即`() => queueJob(update)`，执行更新[参考调度器](../render/scheduler.md)
+5. 设置`value`时，如果前后的值不一致，重新进行响应处理，调用[triggerEffects](./effect.md)
 ```ts
 export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   ref = toRaw(ref)
@@ -131,42 +97,6 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
       })
     } else {
       triggerEffects(dep)
-    }
-  }
-}
-// packages/reactivity/src/effect.ts
-export function triggerEffects(
-  dep: Dep | ReactiveEffect[],
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
-) {
-  // spread into array for stabilization
-  const effects = isArray(dep) ? dep : [...dep]
-  for (const effect of effects) {
-    if (effect.computed) {
-      triggerEffect(effect, debuggerEventExtraInfo)
-    }
-  }
-  for (const effect of effects) {
-    if (!effect.computed) {
-      triggerEffect(effect, debuggerEventExtraInfo)
-    }
-  }
-}
-
-function triggerEffect(
-  effect: ReactiveEffect,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
-) {
-  if (effect !== activeEffect || effect.allowRecurse) {
-    if (__DEV__ && effect.onTrigger) {
-      effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
-    }
-	//  effect.scheduler() 和  effect.run()都会调用 setupRenderEffect内定义的componentUpdateFn()
-	// 只不过scheduler走了调度，run会直接执行
-    if (effect.scheduler) {
-      effect.scheduler()
-    } else {
-      effect.run()
     }
   }
 }
