@@ -38,12 +38,16 @@ export class ReactiveEffect<T = any> {
     recordEffectScope(this, scope) // 记录effect的作用域，组件创建的effect会传递这个值
   }
 
+  // 这个run + parent + activeEffect像是形成了一个洋葱模型, 不断的将activeEffect变更为子effect, 最后在一层层还原回父effect
   run() {
     if (!this.active) {
       return this.fn()
     }
+    // 响应式函数的调用链
     let parent: ReactiveEffect | undefined = activeEffect
     let lastShouldTrack = shouldTrack
+
+    // 向上查找, 如果父级的effect跟当前一致则不执行，防止重复
     while (parent) {
       if (parent === this) {
         return
@@ -62,7 +66,7 @@ export class ReactiveEffect<T = any> {
       } else {
         cleanupEffect(this)
       }
-      return this.fn()
+      return this.fn() // 如果在当前effectA的fn内还有执行effectB.run,这时候effectB.parent就等于effectA, effectB.run执行完毕后将activeEffect变为effectB.parent,还原回去
     } finally {
       if (effectTrackDepth <= maxMarkerBits) {
         finalizeDepMarkers(this)
