@@ -4,7 +4,7 @@ Vue 最标志性的功能就是其低侵入性的响应式系统。组件状态�
 2. reactive()
 3. computed()
 4. readonly()
-5. watchEffect()
+5. [watchEffect()](./watch.md)
 6. watchPostEffect()
 7. watchSyncEffect()
 8. watch()
