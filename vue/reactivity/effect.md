@@ -1,4 +1,4 @@
-# 副作用Effect
+# Effect
 
 ### ReactiveEffect
 ```ts
