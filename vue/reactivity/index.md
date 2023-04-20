@@ -10,7 +10,7 @@ Vue 最标志性的功能就是其低侵入性的响应式系统。组件状态�
 8. watch()
 
 ## 流程介绍
-我还是想先把整个响应流程写在最前面，这样下面的API分析才更好体会,下面将基于这个使用场景进行分析
+我先把整个响应流程写在最前面，这样下面的API分析才更好体会,下面将基于这个使用场景进行分析
 ```vue
 <template>
   <div>{{ count }}</div>
@@ -289,7 +289,7 @@ function createGetter(isReadonly = false, shallow = false) {
     }
 
     if (!isReadonly) {
-      track(target, TrackOpTypes.GET, key)
+      track(target, TrackOpTypes.GET, key) // 收集依赖
     }
 
     if (shallow) {
@@ -360,7 +360,40 @@ function createSetter(shallow = false) {
 
 
 ## computed()
-1. 通过`ComputedRefImpl`创建`ref`对象
+我们定义了`count`和`countB`, 在`countB`内使用了`count`,在`template`内使用`countB`；
+```html
+<template>
+  <div>
+    <p>Doubled Count: {{ countB }}</p>
+    <button @click="increment">Increment</button>
+  </div>
+</template>
+
+<script>
+import { ref, computed } from 'vue'
+
+export default {
+  setup() {
+    const count = ref(0)
+    const countB = computed(() => count.value * 2)
+
+    const increment = () => {
+      count.value++
+    }
+
+    return {
+      count,
+      countB,
+      increment
+    }
+  }
+}
+</script>
+```
+1. 在`setup`阶段，定义了`count`和`countB`, `countB`内对`count`的引用会触发`get value()` 收集当前的副作用，这时候还没有`activeEffect`,
+2. 组件挂在前，会申明一个`effect`来更新dom，并调用其`run`方法，期间生成第一个`activeEffect`, 期间会调用`countB`的`get value()` 收集当前`activeEffect`, 并执行`effect.run`来计算`countB`的值`getter`, 将`activeEffect`传给`parent`,将`activeEffect`改为当前的computed创建的`effect`， `getter`内部引用了`count`, 则触发`count`的`get value()` 收集当前的`activeEffect`即`computed.effect`；
+3. 修改`count`，触发`set value()`, 这时候会触发2中收集的`computed.effect`,不过computed这里调用的是`effect.scheduler`, 内部会去触发`computed`收集的`effect`即更新dom，最后渲染新的dom
+
 ```ts
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
@@ -428,7 +461,7 @@ export class ComputedRefImpl<T> {
     trackRefValue(self)
     if (self._dirty || !self._cacheable) {
       self._dirty = false
-      self._value = self.effect.run()!
+      self._value = self.effect.run()!  // 这里会将当前的effect赋值给activeEffect
     }
     return self._value
   }
