@@ -35,7 +35,7 @@ export default {
 3. `template`渲染函数调用了`count`,会触发`ref`内部定义的`get value()`，该方法内会调用`trackRefValue`方法收集`activeEffect`（`effectA`）存入`dep`内
 4. 现在我们通过`count.value = 1`改变了count的值, 触发`set value()`, 该方法内会调用`triggerRefValue`方法，调用之前在`dep`内收集的`effect`（`effectA`）的`scheduler`或`run`方法，重新更新组件
 
-以上就是基于`template`的响应式更新，还有`computed`,`watch`这些
+以上就是`template`内的响应式更新，还有`computed`,`watch`这些但都打通小异
 
 ## ref()
 1. `ref()`会创建一个`RefImpl`对象
