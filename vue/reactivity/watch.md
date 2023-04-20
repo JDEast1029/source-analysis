@@ -162,3 +162,29 @@ export function watchEffect(
   return doWatch(effect, null, options)
 }
 ```
+
+## watch
+1. 在`doWatch`的`initial run`阶段，执行的是`oldValue = effect.run()` 获取旧值，此时调用了`state.count`的`get value()`,收集`activeEffect`即`doWatch`内申明的`effect`
+2. `state.count++`触发`set value()`, 调用`effect.scheduler()`,即`() => queueJob(job)`，
+3. 再次执行`effect.run()`获取新值, 执行`cb`,将新值和旧值传入
+4. 所以watch不会一开始就触发回调，除非`{ immediate: true }`,这是它会执行`job`即3的步骤
+```ts
+const state = reactive({ count: 0 })
+watch(
+  () => state.count,
+  (count, prevCount) => {
+    /* ... */
+  }
+)
+state.count++
+```
+```ts
+export function watch<T = any, Immediate extends Readonly<boolean> = false>(
+  source: T | WatchSource<T>,
+  cb: any,
+  options?: WatchOptions<Immediate>
+): WatchStopHandle {
+  // ...
+  return doWatch(source as any, cb, options)
+}
+```
